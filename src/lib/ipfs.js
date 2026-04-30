@@ -3,14 +3,15 @@ import CryptoJS from 'crypto-js';
 
 const PINATA_API_KEY = import.meta.env.VITE_PINATA_API_KEY;
 const PINATA_SECRET_KEY = import.meta.env.VITE_PINATA_SECRET_KEY;
+const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 
 export async function uploadToIPFS(file) {
     // 1. Calculate REAL SHA-256 hash of the file first
     const hash = await calculateFileHash(file);
     const trueHash = 'SHA256:' + hash;
 
-    if (!PINATA_API_KEY || !PINATA_SECRET_KEY) {
-        console.warn("Pinata API keys are missing in .env file. Falling back to mock IPFS CID for demo purposes, but using real file hash.");
+    if (!PINATA_JWT && (!PINATA_API_KEY || !PINATA_SECRET_KEY)) {
+        console.warn("Pinata credentials are missing in .env file. Falling back to mock IPFS CID for demo purposes, but using real file hash.");
         return {
             cid: 'ipfs://mockCID_' + hash.substring(0, 16),
             hash: trueHash
@@ -37,13 +38,19 @@ export async function uploadToIPFS(file) {
     formData.append('pinataOptions', pinataOptions);
 
     try {
+        const headers = {
+            maxBodyLength: "Infinity",
+        };
+
+        if (PINATA_JWT) {
+            headers.Authorization = `Bearer ${PINATA_JWT}`;
+        } else {
+            headers.pinata_api_key = PINATA_API_KEY;
+            headers.pinata_secret_api_key = PINATA_SECRET_KEY;
+        }
+
         const res = await axios.post(url, formData, {
-            maxBodyLength: "Infinity", // needed for large files
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
-                pinata_api_key: PINATA_API_KEY,
-                pinata_secret_api_key: PINATA_SECRET_KEY,
-            }
+            headers: headers
         });
         
         return {
