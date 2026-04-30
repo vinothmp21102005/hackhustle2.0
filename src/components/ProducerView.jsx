@@ -42,6 +42,7 @@ const ProducerView = ({ onUpdate }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [finalGenesisHash, setFinalGenesisHash] = useState('');
 
   // Document Forms state
   const [selectedDoc, setSelectedDoc] = useState(null);
@@ -195,7 +196,7 @@ const ProducerView = ({ onUpdate }) => {
       await tx.wait(); // Wait for confirmation
       console.log("Shipment created!");
 
-      chainInstance.addBlock({
+      const genesisBlock = chainInstance.addBlock({
         shipmentId: formData.batchNumber,
         productName: formData.productName,
         status: env.STATUS.GENESIS,
@@ -203,6 +204,8 @@ const ProducerView = ({ onUpdate }) => {
         maxTemp,
         manufacturer: signer.address
       }, signer.address);
+      
+      setFinalGenesisHash(genesisBlock.hash);
       
       if (onUpdate) onUpdate(); // Trigger global refresh
 
@@ -281,8 +284,8 @@ const ProducerView = ({ onUpdate }) => {
 
             <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
               <p style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '0.5rem' }}>CRYPTO-PROOF (BLOCK HASH)</p>
-              <code style={{ fontSize: '0.7rem', color: 'var(--primary)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                {CryptoJS.SHA256(formData.batchNumber + Date.now()).toString()}
+              <code style={{ fontSize: '0.7rem', color: 'var(--primary)', wordBreak: 'break-all', fontFamily: 'monospace', fontWeight: '800' }}>
+                {finalGenesisHash || 'GENERATING_ANCHOR...'}
               </code>
             </div>
 
@@ -712,7 +715,7 @@ const ProducerView = ({ onUpdate }) => {
                     </div>
 
                     <div className="preview-footer">
-                      <div style={{ marginBottom: '0.2rem' }}>GENESIS ANCHOR: {Math.random().toString(36).substring(2, 15).toUpperCase()}</div>
+                      <div style={{ marginBottom: '0.2rem' }}>GENESIS ANCHOR: {CryptoJS.SHA256(formData.batchNumber).toString().substring(0, 16).toUpperCase()}</div>
                       <div>PRODUCED ON HACKBLOCK SECURE NETWORK • {new Date().toLocaleDateString()}</div>
                     </div>
                   </div>
