@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   ArrowRight,
   RefreshCw,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { chainInstance } from './lib/blockchain';
@@ -285,6 +286,25 @@ function App() {
             >
               <RefreshCw size={18} />
               <span style={{ fontSize: '0.875rem' }}>Resync</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                if(window.confirm("Are you sure you want to log out? Your operational session will end.")) {
+                  setUserRole(null);
+                  setCompanyName('');
+                  setActiveTab('dashboard');
+                }
+              }}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                padding: '0.5rem 1rem', borderRadius: '0.5rem',
+                background: '#fff1f2', color: '#e11d48',
+                border: '1px solid #fecaca', fontWeight: '700'
+              }}
+            >
+              <LogOut size={18} />
+              <span style={{ fontSize: '0.875rem' }}>Logout</span>
             </button>
             <button 
               onClick={() => setActiveTab('producer')}
