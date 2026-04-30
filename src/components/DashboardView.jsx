@@ -62,10 +62,8 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
     { label: 'Network Integrity', value: isChainValid ? '99.9%' : 'COMPROMISED', color: isChainValid ? 'var(--success)' : 'var(--error)', icon: ShieldCheck },
     { label: 'Active Shipments', value: filteredShipments.length, color: 'var(--primary)', icon: Package },
     { label: 'Immutable Blocks', value: blocks.length, color: 'var(--secondary)', icon: Activity },
-    { label: 'Fraud Alerts', value: filteredShipments.filter(s => s.status === 'TAMPERED' || s.status === 'ANOMALY').length, color: '#ef4444', icon: AlertCircle },
+    { label: 'Security Alerts', value: allAnomalies.length, color: '#ef4444', icon: AlertCircle },
   ];
-
-  const anomalies = filteredShipments.filter(s => s.status === 'TAMPERED' || s.status === 'ANOMALY');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -475,8 +473,12 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
                       borderRadius: '2rem', 
                       fontSize: '0.7rem', 
                       fontWeight: '700',
-                      background: s.status === 'TRANSIT' ? '#e0f2fe' : s.status === 'TAMPERED' ? '#fee2e2' : '#f0fdf4',
-                      color: s.status === 'TRANSIT' ? '#0369a1' : s.status === 'TAMPERED' ? '#b91c1c' : '#15803d'
+                      background: 
+                        s.status?.includes('TAMPER') || s.status?.includes('Rejected') ? '#fee2e2' : 
+                        s.status?.includes('TRANSIT') || s.status?.includes('PICKUP') ? '#e0f2fe' : '#f0fdf4',
+                      color: 
+                        s.status?.includes('TAMPER') || s.status?.includes('Rejected') ? '#b91c1c' : 
+                        s.status?.includes('TRANSIT') || s.status?.includes('PICKUP') ? '#0369a1' : '#15803d'
                     }}>
                       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
                       {s.status}

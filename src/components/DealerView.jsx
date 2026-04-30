@@ -102,7 +102,23 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
 
   const handleFieldChange = (field, value) => {
     if (originalData[field] !== undefined && originalData[field] !== value) {
-      alert(`⚠️ TAMPER ALERT: You are modifying a common field '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'. This action is unauthorized and will be flagged in the blockchain forensic ledger!`);
+      const warningMsg = `⚠️ TAMPER ALERT: Unauthorized modification of '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'.`;
+      alert(`${warningMsg} This event will be recorded in the global forensic ledger!`);
+      
+      // Log the tamper event to the blockchain immediately
+      chainInstance.addBlock({
+        shipmentId: selectedBatch,
+        productName: field === 'productName' ? value : formData.productName,
+        status: 'SECURITY_TAMPER',
+        alertType: 'UNAUTHORIZED_FIELD_MODIFICATION',
+        modifiedField: field,
+        originalValue: originalData[field],
+        newValue: value,
+        actorRole: 'Dealer',
+        location: env.DEFAULT_DEALER_ID
+      }, env.DEFAULT_DEALER_ID);
+      
+      if (onUpdate) onUpdate();
     }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -132,6 +148,14 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
         const tx = await contract.confirmDelivery(selectedBatch);
         await tx.wait();
 
+        // Record in local forensic ledger too
+        chainInstance.addBlock({
+          shipmentId: selectedBatch,
+          productName: formData.productName,
+          status: env.STATUS.DEALER_ACCEPTED,
+          actorRole: 'Dealer'
+        }, env.DEFAULT_DEALER_ID);
+
         setIsVerifying(false);
         setSelectedBatch('');
         setOtpInput('');
@@ -150,14 +174,22 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
   const handleReject = () => {
     if (!rejectionReason) return;
     
-    // In a full implementation, we would call a rejectShipment smart contract method here.
-    // For now, we'll just update the local UI state.
+    // Log the rejection event to the blockchain forensic ledger
+    chainInstance.addBlock({
+      shipmentId: selectedBatch,
+      productName: formData.productName,
+      status: env.STATUS.DEALER_REJECTED,
+      rejectionReason: rejectionReason,
+      actorRole: 'Dealer',
+      timestamp: Date.now()
+    }, env.DEFAULT_DEALER_ID);
+    
     console.log(`Shipment ${selectedBatch} rejected. Reason: ${rejectionReason}`);
     
     setShowRejection(false);
     setSelectedBatch('');
     if (onUpdate) onUpdate();
-    alert('Shipment REJECTED. Forensic data anchored (simulated).');
+    alert(`Shipment REJECTED for ${rejectionReason}. Rejection block anchored to forensic ledger.`);
   };
 
   return (

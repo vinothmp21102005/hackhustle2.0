@@ -69,7 +69,23 @@ const WarehouseView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
 
   const handleFieldChange = (field, value) => {
     if (originalData[field] !== undefined && originalData[field] !== value) {
-      alert(`⚠️ TAMPER ALERT: You are modifying a common field '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'. This action is unauthorized and will be flagged in the blockchain forensic ledger!`);
+      const warningMsg = `⚠️ TAMPER ALERT: Unauthorized modification of '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'.`;
+      alert(`${warningMsg} This event will be recorded in the global forensic ledger!`);
+      
+      // Log the tamper event to the blockchain immediately
+      chainInstance.addBlock({
+        shipmentId: selectedBatch,
+        productName: field === 'productName' ? value : formData.productName,
+        status: 'SECURITY_TAMPER',
+        alertType: 'UNAUTHORIZED_FIELD_MODIFICATION',
+        modifiedField: field,
+        originalValue: originalData[field],
+        newValue: value,
+        actorRole: 'Warehouse',
+        location: `Warehouse Zone: ${formData.storageZone}`
+      }, env.DEFAULT_WAREHOUSE_ID);
+      
+      if (onUpdate) onUpdate();
     }
     setFormData(prev => ({ ...prev, [field]: value }));
   };

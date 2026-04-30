@@ -96,21 +96,29 @@ export const detectAnomalies = (shipment, history = []) => {
         }
     }
 
-    // 4. Temperature Threshold Breach (Real-time Audit)
+    // 5. Explicit Security Alerts and Rejections
     history.forEach(event => {
-        if (event.data.temperature !== undefined) {
-            const temp = parseFloat(event.data.temperature);
-            if (temp < parseFloat(shipment.minTemp || 2) || temp > parseFloat(shipment.maxTemp || 8)) {
-                anomalies.push({
-                    type: 'TEMPERATURE_BREACH',
-                    severity: 'critical',
-                    message: `Temperature excursion detected: ${temp}°C`,
-                    context: `Required Range: ${shipment.minTemp || 2}°C to ${shipment.maxTemp || 8}°C`,
-                    responsibleActor: event.actor,
-                    signature: event.signature,
-                    timestamp: event.timestamp
-                });
-            }
+        if (event.data.status === 'SECURITY_TAMPER') {
+            anomalies.push({
+                type: 'SECURITY_BREACH',
+                severity: 'critical',
+                message: `Unauthorized modification detected: ${event.data.modifiedField}`,
+                context: `Alert triggered by ${event.data.actorRole}. Original: ${event.data.originalValue}, New: ${event.data.newValue}`,
+                responsibleActor: event.actor,
+                signature: event.signature,
+                timestamp: event.timestamp
+            });
+        }
+        if (event.data.status?.includes('Rejected')) {
+            anomalies.push({
+                type: 'SHIPMENT_REJECTION',
+                severity: 'critical',
+                message: `Shipment rejected by recipient`,
+                context: `Reason: ${event.data.rejectionReason || 'Unknown'}`,
+                responsibleActor: event.actor,
+                signature: event.signature,
+                timestamp: event.timestamp
+            });
         }
     });
 
