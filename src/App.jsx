@@ -37,23 +37,32 @@ function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [activeOtps, setActiveOtps] = useState({}); // { shipmentId: otp }
   const [walletAddress, setWalletAddress] = useState(null);
+  const [userRole, setUserRole] = useState(null); // 'Manufacturer', 'Carrier', 'Warehouse', 'Dealer'
+  const [companyName, setCompanyName] = useState('');
 
   const handleConnectWallet = async () => {
     try {
       const { address, type } = await connectWallet();
       setWalletAddress(address);
-      console.log(`Connected via ${type}: ${address}`);
     } catch (error) {
       console.error("Connection error:", error);
     }
   };
 
-
-
-  // Auto-connect on mount
-  useEffect(() => {
-    handleConnectWallet();
-  }, []);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const role = formData.get('role');
+    const company = formData.get('company');
+    setUserRole(role);
+    setCompanyName(company);
+    
+    // Auto-select first allowed tab
+    if (role === 'Manufacturer') setActiveTab('producer');
+    else if (role === 'Carrier') setActiveTab('carrier');
+    else if (role === 'Warehouse') setActiveTab('warehouse');
+    else if (role === 'Dealer') setActiveTab('dealer');
+  };
 
   // Sync with blockchain instance
   const refreshChain = () => {
@@ -80,21 +89,25 @@ function App() {
   };
 
   useEffect(() => {
+    handleConnectWallet();
     refreshChain();
     // Auto-refresh every 5 seconds to ensure ledger parity
     const interval = setInterval(refreshChain, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'producer', label: 'Producer Portal', icon: PlusCircle },
-    { id: 'carrier', label: 'Carrier Logistics', icon: Truck },
-    { id: 'warehouse', label: 'Warehouse Hub', icon: Warehouse },
-    { id: 'customs', label: 'Customs Broker', icon: ShieldCheck },
-    { id: 'dealer', label: 'Dealer Inventory', icon: Store },
-    { id: 'enduser', label: 'Consumer Verify', icon: UserCheck },
+  const allMenuItems = [
+    { id: 'dashboard', label: 'Network State', icon: LayoutDashboard, roles: ['any'] },
+    { id: 'producer', label: 'Manufacturer', icon: PlusCircle, roles: ['Manufacturer'] },
+    { id: 'carrier', label: 'Carrier', icon: Truck, roles: ['Carrier'] },
+    { id: 'warehouse', label: 'Warehouse', icon: Warehouse, roles: ['Warehouse'] },
+    { id: 'dealer', label: 'Dealer', icon: Store, roles: ['Dealer'] },
+    { id: 'enduser', label: 'Consumer Verify', icon: UserCheck, roles: ['any'] },
   ];
+
+  const menuItems = allMenuItems.filter(item => 
+    item.roles.includes('any') || item.roles.includes(userRole)
+  );
 
   const renderView = () => {
     switch (activeTab) {
@@ -102,12 +115,61 @@ function App() {
       case 'producer': return <ProducerView onUpdate={refreshChain} />;
       case 'carrier': return <CarrierView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} searchQuery={searchQuery} />;
       case 'warehouse': return <WarehouseView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} searchQuery={searchQuery} />;
-      case 'customs': return <CustomsBrokerView shipments={shipments} onUpdate={refreshChain} searchQuery={searchQuery} />;
       case 'dealer': return <DealerView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} onGenerateOtp={handleGenerateOtp} searchQuery={searchQuery} />;
       case 'enduser': return <EndUserView shipments={shipments} searchQuery={searchQuery} />;
       default: return <DashboardView shipments={shipments} blocks={blocks} isChainValid={isChainValid} onUpdate={refreshChain} searchQuery={searchQuery} />;
     }
   };
+
+  if (!userRole) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'Inter, sans-serif' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ background: 'white', padding: '3rem', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '100%', maxWidth: '450px', border: '1px solid #e2e8f0' }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ background: 'var(--primary)', color: 'white', width: '56px', height: '56px', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
+              <Lock size={28} />
+            </div>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.5rem' }}>Company Access</h2>
+            <p style={{ color: '#64748b', fontWeight: '500' }}>Secure Logistics Gateway</p>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Company Name</label>
+              <input name="company" required placeholder="e.g. BioPharma Global" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', transition: 'border-color 0.2s', width: '100%', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Access Credentials</label>
+              <input type="password" required placeholder="••••••••" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Select Operational Role</label>
+              <select name="role" required style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' }}>
+                <option value="Manufacturer">Manufacturer / Producer</option>
+                <option value="Carrier">Logistics Carrier</option>
+                <option value="Warehouse">Warehouse Hub</option>
+                <option value="Dealer">Authorized Dealer</option>
+              </select>
+            </div>
+
+            <button type="submit" style={{ background: 'var(--primary)', color: 'white', padding: '1rem', borderRadius: '0.75rem', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', marginTop: '1rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}>
+              Authorize & Enter
+            </button>
+          </form>
+          
+          <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={14} /> Cryptographically Secured Session
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container" style={{ flexDirection: 'column', background: 'var(--bg-main)' }}>

@@ -78,13 +78,40 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
     }
   }, [viewingDoc, selectedBatch]);
 
+  const [selectedShipment, setSelectedShipment] = useState(null);
+  const [formData, setFormData] = useState({
+    productName: '',
+    batchNumber: ''
+  });
+  const [originalData, setOriginalData] = useState({});
+
+  React.useEffect(() => {
+    const shipment = shipments.find(s => s.shipmentId === selectedBatch);
+    setSelectedShipment(shipment);
+    if (shipment) {
+      setFormData({
+        productName: shipment.productName || '',
+        batchNumber: shipment.shipmentId || ''
+      });
+      setOriginalData({
+        productName: shipment.productName || '',
+        batchNumber: shipment.shipmentId || ''
+      });
+    }
+  }, [selectedBatch, shipments]);
+
+  const handleFieldChange = (field, value) => {
+    if (originalData[field] !== undefined && originalData[field] !== value) {
+      alert(`⚠️ TAMPER ALERT: You are modifying a common field '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'. This action is unauthorized and will be flagged in the blockchain forensic ledger!`);
+    }
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   // Shipments that are headed to the dealer or in progress
   const relevantShipments = filteredShipments.filter(s => 
     s.status !== env.STATUS.DEALER_ACCEPTED && 
     s.status !== env.STATUS.DEALER_REJECTED
   );
-
-  const selectedShipment = shipments.find(s => s.shipmentId === selectedBatch);
 
   const generateOtp = () => {
     if (!selectedBatch) return;
@@ -194,6 +221,17 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
 
         {selectedShipment && (
           <div className="animate-fade">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div className="field">
+                <label>Product Name (Common Field)</label>
+                <input value={formData.productName} onChange={e => handleFieldChange('productName', e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>Batch No (Common Field)</label>
+                <input value={formData.batchNumber} onChange={e => handleFieldChange('batchNumber', e.target.value)} required />
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
               <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '1rem', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>

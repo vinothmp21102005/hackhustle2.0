@@ -50,6 +50,8 @@ const CarrierView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
   const [docDetails, setDocDetails] = useState(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [formData, setFormData] = useState({
+    productName: '',
+    batchNumber: '',
     vehicleId: 'TRUCK-DELTA-401',
     driverId: 'DRV-772',
     sealNumber: 'SEAL-4491',
@@ -57,6 +59,35 @@ const CarrierView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
     location: 'In-Transit',
     packageCondition: 'OK'
   });
+  const [originalData, setOriginalData] = useState({});
+
+  useEffect(() => {
+    if (activeBatchData) {
+      const data = {
+        productName: activeBatchData.productName || '',
+        batchNumber: activeBatchData.shipmentId || '',
+        vehicleId: 'TRUCK-DELTA-401',
+        driverId: 'DRV-772',
+        sealNumber: 'SEAL-4491',
+        temperature: '4.5',
+        location: 'In-Transit',
+        packageCondition: 'OK'
+      };
+      setFormData(data);
+      setOriginalData({
+        productName: activeBatchData.productName || '',
+        batchNumber: activeBatchData.shipmentId || ''
+      });
+    }
+  }, [activeBatchData]);
+
+  const handleFieldChange = (field, value) => {
+    if (originalData[field] !== undefined && originalData[field] !== value) {
+      alert(`⚠️ TAMPER ALERT: You are modifying a common field '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'. This action is unauthorized and will be flagged in the blockchain forensic ledger!`);
+    }
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const [isAutoLogging, setIsAutoLogging] = useState(false);
   const [autoLogInterval, setAutoLogInterval] = useState(null);
   const [liveSensors, setLiveSensors] = useState({});
@@ -157,6 +188,7 @@ const CarrierView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
       // Sync with local forensic ledger
       chainInstance.addBlock({
         shipmentId: selectedBatch,
+        productName: formData.productName,
         status: actionText,
         temperature: formData.temperature,
         location: locationString,
@@ -374,6 +406,17 @@ const CarrierView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
                     {t.toUpperCase()}
                   </button>
                 ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div className="field">
+                  <label>Product Name (Common Field)</label>
+                  <input value={formData.productName} onChange={e => handleFieldChange('productName', e.target.value)} required />
+                </div>
+                <div className="field">
+                  <label>Batch No (Common Field)</label>
+                  <input value={formData.batchNumber} onChange={e => handleFieldChange('batchNumber', e.target.value)} required />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
