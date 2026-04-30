@@ -47,15 +47,28 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
       }));
   };
 
+  const [resolutionNotes, setResolutionNotes] = useState('');
+
   const handleResolveAnomaly = (shipmentId, isConfirmed) => {
+    if (!resolutionNotes) {
+      alert("Please enter investigation notes before resolving the incident.");
+      return;
+    }
+
     // In a real app, this would trigger a blockchain transaction with security clearance
     chainInstance.addBlock({
       shipmentId,
       action: isConfirmed ? 'SECURITY_CONFIRMED' : 'FALSE_ALARM_DISMISSED',
       timestamp: Date.now(),
+      investigator: 'HACKBLOCK_SEC_OFFICE',
+      notes: resolutionNotes,
       details: isConfirmed ? 'Manual security override confirmed. Shipment held for inspection.' : 'False alarm. Shipment cleared for transit.'
     }, 'SECURITY_OFFICE');
+    
+    setResolutionNotes('');
+    setInvestigatingShipment(null);
     onUpdate();
+    alert(`Incident ${isConfirmed ? 'CONFIRMED' : 'DISMISSED'} and anchored to forensic ledger.`);
   };
 
   const stats = [
@@ -385,7 +398,7 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid var(--border)', flex: 1 }}>
+                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid var(--border)' }}>
                   <h4 style={{ margin: '0 0 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <History size={18} color="var(--primary)" /> Custody Trail Analysis
                   </h4>
@@ -395,12 +408,28 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
                       <div key={idx} style={{ position: 'relative', marginBottom: '1.5rem' }}>
                         <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '12px', height: '12px', borderRadius: '50%', background: 'white', border: '2px solid var(--primary)' }} />
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(b.timestamp).toLocaleString()}</div>
-                        <div style={{ fontWeight: '700', fontSize: '0.9rem', margin: '0.1rem 0' }}>{b.data.action}</div>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', margin: '0.1rem 0' }}>{b.data.action || 'LEDGER_ENTRY'}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text)', background: 'white', padding: '0.5rem', borderRadius: '0.5rem', marginTop: '0.3rem', border: '1px solid var(--border)' }}>
-                          Handled by: <span style={{ fontWeight: '600' }}>{b.validator}</span>
+                          Validated by: <span style={{ fontWeight: '600' }}>{b.actor}</span>
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid #fef3c7' }}>
+                  <h4 style={{ margin: '0 0 1rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Shield size={18} /> Resolution & Forensic Sealing
+                  </h4>
+                  <div className="field">
+                    <label style={{ color: '#b45309', fontWeight: '700' }}>Investigation Resolution Notes (Manual Entry Required)</label>
+                    <textarea 
+                      value={resolutionNotes}
+                      onChange={e => setResolutionNotes(e.target.value)}
+                      placeholder="Enter findings, physical inspection results, or justification for resolution..."
+                      style={{ height: '100px', borderRadius: '0.75rem', border: '1.5px solid #fde68a', marginTop: '0.5rem', padding: '0.75rem' }}
+                      required
+                    />
                   </div>
                 </div>
 
