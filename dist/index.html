@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hack_block</title>
+    <script type="module" crossorigin src="/assets/index-exqZKRsp.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-YJcfazB7.css">
+  </head>
+  <body>
+    <style>
+      #login-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #f8fafc; z-index: 999999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .login-box {
+        background: white; padding: 2.5rem; border-radius: 1rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        width: 100%; max-width: 400px; border: 1px solid #e2e8f0;
+      }
+      .login-box h2 {
+        margin-top: 0; color: #1e293b; text-align: center; margin-bottom: 1.5rem;
+      }
+      .input-group { margin-bottom: 1rem; }
+      .input-group label {
+        display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #64748b;
+      }
+      .input-group input, .input-group select {
+        width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #cbd5e1;
+        font-size: 1rem; outline: none; box-sizing: border-box;
+      }
+      .input-group input:focus, .input-group select:focus { border-color: #2563eb; }
+      .login-btn {
+        width: 100%; padding: 0.75rem; background: #2563eb; color: white;
+        border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600;
+        cursor: pointer; margin-top: 1rem; transition: background 0.2s;
+      }
+      .login-btn:hover { background: #1d4ed8; }
+    </style>
+
+    <div id="login-overlay">
+      <div class="login-box">
+        <h2>Company Login</h2>
+        <div id="wallet-status" style="text-align:center; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">Checking Wallet...</div>
+        <form id="login-form">
+          <div class="input-group">
+            <label>Company Name</label>
+            <input type="text" id="company-name" required placeholder="e.g. Acme Corp">
+          </div>
+          <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="company-pass" required placeholder="••••••••">
+          </div>
+          <div class="input-group">
+            <label>Select Role</label>
+            <select id="company-role" required>
+              <option value="Manufacturer">Manufacturer</option>
+              <option value="Carrier">Carrier</option>
+              <option value="Warehouse">Warehouse</option>
+              <option value="Dealer">Dealer</option>
+            </select>
+          </div>
+          <button type="submit" class="login-btn">Enter System</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+      async function fetchWallet() {
+        const statusDiv = document.getElementById('wallet-status');
+        if (window.ethereum) {
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (accounts.length > 0) {
+              const acc = accounts[0];
+              statusDiv.innerHTML = `<span style="color: #10b981; font-weight: bold;">●</span> Connected: ${acc.slice(0,6)}...${acc.slice(-4)}`;
+            } else {
+              statusDiv.innerText = 'MetaMask disconnected';
+            }
+          } catch (err) {
+            statusDiv.innerText = 'MetaMask connection failed';
+          }
+        } else {
+          statusDiv.innerText = 'MetaMask not installed';
+        }
+      }
+      fetchWallet();
+
+      let loggedInRole = null;
+      let loggedInComp = null;
+
+      // Modern styles for the injected table
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .injected-workflows-card {
+          background: white; border-radius: 1rem; border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 1.5rem; margin-bottom: 2rem;
+          font-family: system-ui, -apple-system, sans-serif;
+          width: 100%; max-width: 1000px; margin-left: auto; margin-right: auto;
+        }
+        .injected-header {
+          display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;
+        }
+        .injected-title {
+          font-size: 1.1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .injected-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .injected-table th { color: #64748b; font-size: 0.75rem; text-transform: uppercase; padding-bottom: 1rem; font-weight: 700; border-bottom: 1px solid #f1f5f9; }
+        .injected-table td { padding: 1rem 0; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 0.9rem; }
+        .injected-table tr:last-child td { border-bottom: none; }
+        .btn-join {
+          background: #10b981; color: white; padding: 0.4rem 1rem; border-radius: 0.5rem;
+          font-weight: 600; font-size: 0.8rem; border: none; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-join:hover { background: #059669; transform: translateY(-1px); }
+        .btn-otp {
+          background: #f59e0b; color: white; padding: 0.4rem 1rem; border-radius: 0.5rem;
+          font-weight: 600; font-size: 0.8rem; border: none; cursor: pointer; transition: all 0.2s; margin-left: 0.5rem;
+        }
+        .btn-otp:hover { background: #d97706; transform: translateY(-1px); }
+        .wf-badge { background: #f1f5f9; color: #475569; padding: 0.2rem 0.5rem; border-radius: 0.3rem; font-family: monospace; font-size: 0.8rem; }
+      `;
+      document.head.appendChild(style);
+
+      document.getElementById('login-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loggedInRole = document.getElementById('company-role').value;
+        loggedInComp = document.getElementById('company-name').value;
+        
+        // Hide login overlay
+        document.getElementById('login-overlay').style.display = 'none';
+        
+        // Setup header badge
+        setInterval(() => {
+          const header = document.querySelector('header');
+          if (header && !document.getElementById('company-badge')) {
+            const badge = document.createElement('div');
+            badge.id = 'company-badge';
+            badge.innerHTML = `<span style="background:#e0e7ff; color:#3730a3; padding: 0.3rem 0.6rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: bold; border: 1px solid #c7d2fe; margin-right: 10px;">🏢 ${loggedInComp}</span>`;
+            header.lastElementChild.insertBefore(badge, header.lastElementChild.firstChild);
+          }
+        }, 500);
+      });
+
+      // Use MutationObserver to inject the dashboard widget into the React Dashboard
+      const observer = new MutationObserver((mutations) => {
+        if (!loggedInComp) return; // Not logged in yet
+        
+        // Look for the LIVE FORENSIC TIMELINE container to know we are on the Dashboard tab
+        const timelineHeaders = Array.from(document.querySelectorAll('div')).filter(d => d.textContent === ' LIVE FORENSIC TIMELINE');
+        if (timelineHeaders.length > 0) {
+          const timelineHeader = timelineHeaders[timelineHeaders.length - 1]; // get the innermost one usually
+          
+          if (!document.getElementById('injected-workflows-card')) {
+            const card = document.createElement('div');
+            card.id = 'injected-workflows-card';
+            card.className = 'injected-workflows-card';
+            card.innerHTML = `
+              <div class="injected-header">
+                <div class="injected-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                  Active Company Workflows
+                </div>
+              </div>
+              <table class="injected-table">
+                <thead>
+                  <tr>
+                    <th>Workflow ID</th>
+                    <th>Name</th>
+                    <th>Creation Date</th>
+                    <th>Logistics Product</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="wf-badge">WF-8239</span></td>
+                    <td style="font-weight: 600;">Primary Cold Chain Route</td>
+                    <td>Oct 20, 2023</td>
+                    <td>Pfizer Vaccines (Batch A)</td>
+                    <td>
+                      <button class="btn-join" onclick="joinWorkflow('WF-8239')">Participate</button>
+                      <button class="btn-otp" onclick="generateOtp('WF-8239')">Generate Handoff OTP</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="wf-badge">WF-8240</span></td>
+                    <td style="font-weight: 600;">Secondary Backup Route</td>
+                    <td>Oct 22, 2023</td>
+                    <td>Moderna Booster (Batch B)</td>
+                    <td>
+                      <button class="btn-join" onclick="joinWorkflow('WF-8240')">Participate</button>
+                      <button class="btn-otp" onclick="generateOtp('WF-8240')">Generate Handoff OTP</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="wf-badge">WF-8255</span></td>
+                    <td style="font-weight: 600;">Regional Distribution #4</td>
+                    <td>Oct 23, 2023</td>
+                    <td>Insulin Vials</td>
+                    <td>
+                      <button class="btn-join" onclick="joinWorkflow('WF-8255')">Participate</button>
+                      <button class="btn-otp" onclick="generateOtp('WF-8255')">Generate Handoff OTP</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            `;
+            // Insert it before the timeline wrapper
+            const timelineCard = timelineHeader.closest('div[style*="max-width: 1000px"]');
+            if (timelineCard && timelineCard.parentNode) {
+              timelineCard.parentNode.insertBefore(card, timelineCard);
+            }
+          }
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      window.generateOtp = function(wfId) {
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        localStorage.setItem('OTP_' + wfId, otp);
+        alert(`🔑 GENERATED HANDOFF OTP: ${otp}\n\nPlease provide this 4-digit code to the next person in the workflow (e.g. Carrier or Warehouse). They will need it to accept the product!`);
+      };
+
+      window.joinWorkflow = function(wfId) {
+        const storedOtp = localStorage.getItem('OTP_' + wfId);
+        if (storedOtp) {
+          const userOtp = prompt(`🔒 Security Check: A secure handoff has been initiated for ${wfId}.\n\nPlease enter the 4-digit OTP provided by the previous person in the flow:`);
+          if (userOtp !== storedOtp) {
+            alert('❌ Invalid OTP! Cryptographic handoff failed. Access denied to this workflow.');
+            return;
+          }
+          alert('✅ Match Verified! Handoff successful. Product integrity confirmed on the timeline.');
+          // Clear it after successful handoff so they don't get prompted again unless a new one is generated
+          localStorage.removeItem('OTP_' + wfId);
+        }
+
+        const badgeSpan = document.querySelector('#company-badge span');
+        if (badgeSpan) badgeSpan.innerText = `🏢 ${loggedInComp} | Workflow: ${wfId}`;
+        
+        const buttons = document.querySelectorAll('button');
+        for (const btn of buttons) {
+          if (btn.textContent.includes(loggedInRole)) {
+            btn.click();
+            return;
+          }
+        }
+      };
+    </script>
+  </body>
+</html>
