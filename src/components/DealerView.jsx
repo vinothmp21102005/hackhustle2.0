@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { chainInstance } from '../lib/blockchain';
 import { connectWallet, getContract } from '../lib/web3';
 import env from '../config/env';
 import { 
@@ -109,6 +110,14 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
         setSelectedBatch('');
         setOtpInput('');
         if (onUpdate) onUpdate();
+        
+        // Sync with local forensic ledger
+        chainInstance.addBlock({
+          shipmentId: selectedBatch,
+          status: env.STATUS.DEALER_ACCEPTED,
+          action: 'DELIVERY_CONFIRMED'
+        }, signer.address);
+
         alert('Shipment verified and accepted. Ledger updated on Blockchain.');
       } catch (error) {
         console.error(error);
@@ -130,7 +139,16 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
     setShowRejection(false);
     setSelectedBatch('');
     if (onUpdate) onUpdate();
-    alert('Shipment REJECTED. Forensic data anchored (simulated).');
+
+    // Sync with local forensic ledger
+    chainInstance.addBlock({
+      shipmentId: selectedBatch,
+      status: env.STATUS.DEALER_REJECTED,
+      reason: rejectionReason,
+      action: 'DELIVERY_REJECTED'
+    }, 'DEALER_INSPECTION');
+
+    alert('Shipment REJECTED. Forensic data anchored.');
   };
 
   return (

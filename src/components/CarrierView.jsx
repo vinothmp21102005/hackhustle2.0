@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { chainInstance } from '../lib/blockchain';
 import { connectWallet, getContract } from '../lib/web3';
 import { iotRegistry } from '../lib/iotRegistry';
 import env from '../config/env';
