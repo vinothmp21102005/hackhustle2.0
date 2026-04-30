@@ -54,14 +54,21 @@ function App() {
     const formData = new FormData(e.target);
     const role = formData.get('role');
     const company = formData.get('company');
-    setUserRole(role);
-    setCompanyName(company);
+    const password = formData.get('password');
     
-    // Auto-select first allowed tab
-    if (role === 'Manufacturer') setActiveTab('producer');
-    else if (role === 'Carrier') setActiveTab('carrier');
-    else if (role === 'Warehouse') setActiveTab('warehouse');
-    else if (role === 'Dealer') setActiveTab('dealer');
+    // Simple check for demo: allow any password that matches env bypass or is 'admin123'
+    if (password === env.OTP_BYPASS_CODE || password === 'admin123' || !password) {
+      setUserRole(role);
+      setCompanyName(company);
+      
+      // Auto-select first allowed tab
+      if (role === 'Manufacturer') setActiveTab('producer');
+      else if (role === 'Carrier') setActiveTab('carrier');
+      else if (role === 'Warehouse') setActiveTab('warehouse');
+      else if (role === 'Dealer') setActiveTab('dealer');
+    } else {
+      alert("Invalid Access Credentials. Please check your password.");
+    }
   };
 
   // Sync with blockchain instance
@@ -145,7 +152,7 @@ function App() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Access Credentials</label>
-              <input type="password" required placeholder="••••••••" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              <input name="password" type="password" required placeholder="••••••••" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
