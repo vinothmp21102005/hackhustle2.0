@@ -78,56 +78,13 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
     }
   }, [viewingDoc, selectedBatch]);
 
-  const [selectedShipment, setSelectedShipment] = useState(null);
-  const [formData, setFormData] = useState({
-    productName: '',
-    batchNumber: ''
-  });
-  const [originalData, setOriginalData] = useState({});
-
-  React.useEffect(() => {
-    const shipment = shipments.find(s => s.shipmentId === selectedBatch);
-    setSelectedShipment(shipment);
-    if (shipment) {
-      setFormData({
-        productName: shipment.productName || '',
-        batchNumber: shipment.shipmentId || ''
-      });
-      setOriginalData({
-        productName: shipment.productName || '',
-        batchNumber: shipment.shipmentId || ''
-      });
-    }
-  }, [selectedBatch, shipments]);
-
-  const handleFieldChange = (field, value) => {
-    if (originalData[field] !== undefined && originalData[field] !== value) {
-      const warningMsg = `⚠️ TAMPER ALERT: Unauthorized modification of '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'.`;
-      alert(`${warningMsg} This event will be recorded in the global forensic ledger!`);
-      
-      // Log the tamper event to the blockchain immediately
-      chainInstance.addBlock({
-        shipmentId: selectedBatch,
-        productName: field === 'productName' ? value : formData.productName,
-        status: 'SECURITY_TAMPER',
-        alertType: 'UNAUTHORIZED_FIELD_MODIFICATION',
-        modifiedField: field,
-        originalValue: originalData[field],
-        newValue: value,
-        actorRole: 'Dealer',
-        location: env.DEFAULT_DEALER_ID
-      }, env.DEFAULT_DEALER_ID);
-      
-      if (onUpdate) onUpdate();
-    }
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   // Shipments that are headed to the dealer or in progress
   const relevantShipments = filteredShipments.filter(s => 
     s.status !== env.STATUS.DEALER_ACCEPTED && 
     s.status !== env.STATUS.DEALER_REJECTED
   );
+
+  const selectedShipment = shipments.find(s => s.shipmentId === selectedBatch);
 
   const generateOtp = () => {
     if (!selectedBatch) return;
@@ -148,14 +105,6 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
         const tx = await contract.confirmDelivery(selectedBatch);
         await tx.wait();
 
-        // Record in local forensic ledger too
-        chainInstance.addBlock({
-          shipmentId: selectedBatch,
-          productName: formData.productName,
-          status: env.STATUS.DEALER_ACCEPTED,
-          actorRole: 'Dealer'
-        }, env.DEFAULT_DEALER_ID);
-
         setIsVerifying(false);
         setSelectedBatch('');
         setOtpInput('');
@@ -174,22 +123,14 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
   const handleReject = () => {
     if (!rejectionReason) return;
     
-    // Log the rejection event to the blockchain forensic ledger
-    chainInstance.addBlock({
-      shipmentId: selectedBatch,
-      productName: formData.productName,
-      status: env.STATUS.DEALER_REJECTED,
-      rejectionReason: rejectionReason,
-      actorRole: 'Dealer',
-      timestamp: Date.now()
-    }, env.DEFAULT_DEALER_ID);
-    
+    // In a full implementation, we would call a rejectShipment smart contract method here.
+    // For now, we'll just update the local UI state.
     console.log(`Shipment ${selectedBatch} rejected. Reason: ${rejectionReason}`);
     
     setShowRejection(false);
     setSelectedBatch('');
     if (onUpdate) onUpdate();
-    alert(`Shipment REJECTED for ${rejectionReason}. Rejection block anchored to forensic ledger.`);
+    alert('Shipment REJECTED. Forensic data anchored (simulated).');
   };
 
   return (
@@ -253,17 +194,6 @@ const DealerView = ({ shipments, onUpdate, activeOtps, onGenerateOtp, searchQuer
 
         {selectedShipment && (
           <div className="animate-fade">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div className="field">
-                <label>Product Name (Common Field)</label>
-                <input value={formData.productName} onChange={e => handleFieldChange('productName', e.target.value)} required />
-              </div>
-              <div className="field">
-                <label>Batch No (Common Field)</label>
-                <input value={formData.batchNumber} onChange={e => handleFieldChange('batchNumber', e.target.value)} required />
-              </div>
-            </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
               <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '1rem', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>

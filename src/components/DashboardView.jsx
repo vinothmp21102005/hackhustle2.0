@@ -1,23 +1,23 @@
+import React, { useState } from 'react';
 import { 
   Shield, Activity, Package, AlertCircle, CheckCircle2, ArrowRight, 
   ShieldCheck, XCircle, Hash, UserCheck, Search, FileText, 
-  Thermometer, History, Clock, ChevronDown, ChevronUp, MapPin, Truck, Warehouse as WarehouseIcon
+  Thermometer, History 
 } from 'lucide-react';
 import env from '../config/env';
 import { chainInstance } from '../lib/blockchain';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
 
 import { detectAnomalies } from '../lib/anomaly';
+import WorkflowsCard from './WorkflowsCard';
 
-const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery }) => {
+const DashboardView = ({ user, shipments, blocks, isChainValid, onUpdate, searchQuery }) => {
   const [selectedBlock, setSelectedBlock] = useState(null);
   const [showLedger, setShowLedger] = useState(false);
   const [investigatingShipment, setInvestigatingShipment] = useState(null);
-  const [expandedShipment, setExpandedShipment] = useState(null);
 
   const filteredShipments = searchQuery 
     ? shipments.filter(s => 
@@ -48,36 +48,25 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
       }));
   };
 
-  const [resolutionNotes, setResolutionNotes] = useState('');
-
   const handleResolveAnomaly = (shipmentId, isConfirmed) => {
-    if (!resolutionNotes) {
-      alert("Please enter investigation notes before resolving the incident.");
-      return;
-    }
-
     // In a real app, this would trigger a blockchain transaction with security clearance
     chainInstance.addBlock({
       shipmentId,
       action: isConfirmed ? 'SECURITY_CONFIRMED' : 'FALSE_ALARM_DISMISSED',
       timestamp: Date.now(),
-      investigator: 'HACKBLOCK_SEC_OFFICE',
-      notes: resolutionNotes,
       details: isConfirmed ? 'Manual security override confirmed. Shipment held for inspection.' : 'False alarm. Shipment cleared for transit.'
     }, 'SECURITY_OFFICE');
-    
-    setResolutionNotes('');
-    setInvestigatingShipment(null);
     onUpdate();
-    alert(`Incident ${isConfirmed ? 'CONFIRMED' : 'DISMISSED'} and anchored to forensic ledger.`);
   };
 
   const stats = [
     { label: 'Network Integrity', value: isChainValid ? '99.9%' : 'COMPROMISED', color: isChainValid ? 'var(--success)' : 'var(--error)', icon: ShieldCheck },
     { label: 'Active Shipments', value: filteredShipments.length, color: 'var(--primary)', icon: Package },
     { label: 'Immutable Blocks', value: blocks.length, color: 'var(--secondary)', icon: Activity },
-    { label: 'Security Alerts', value: allAnomalies.length, color: '#ef4444', icon: AlertCircle },
+    { label: 'Fraud Alerts', value: filteredShipments.filter(s => s.status === 'TAMPERED' || s.status === 'ANOMALY').length, color: '#ef4444', icon: AlertCircle },
   ];
+
+  const anomalies = filteredShipments.filter(s => s.status === 'TAMPERED' || s.status === 'ANOMALY');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -95,6 +84,15 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
           </div>
         ))}
       </div>
+
+      {/* Injected Workflows Card */}
+      {user && (
+        <WorkflowsCard 
+          companyName={user.companyName} 
+          role={user.role} 
+          onJoinWorkflow={(wf) => console.log("Joined workflow:", wf.id)} 
+        />
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -399,7 +397,7 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid var(--border)' }}>
+                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid var(--border)', flex: 1 }}>
                   <h4 style={{ margin: '0 0 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <History size={18} color="var(--primary)" /> Custody Trail Analysis
                   </h4>
@@ -409,28 +407,12 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
                       <div key={idx} style={{ position: 'relative', marginBottom: '1.5rem' }}>
                         <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '12px', height: '12px', borderRadius: '50%', background: 'white', border: '2px solid var(--primary)' }} />
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(b.timestamp).toLocaleString()}</div>
-                        <div style={{ fontWeight: '700', fontSize: '0.9rem', margin: '0.1rem 0' }}>{b.data.action || 'LEDGER_ENTRY'}</div>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', margin: '0.1rem 0' }}>{b.data.action}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text)', background: 'white', padding: '0.5rem', borderRadius: '0.5rem', marginTop: '0.3rem', border: '1px solid var(--border)' }}>
-                          Validated by: <span style={{ fontWeight: '600' }}>{b.actor}</span>
+                          Handled by: <span style={{ fontWeight: '600' }}>{b.validator}</span>
                         </div>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid #fef3c7' }}>
-                  <h4 style={{ margin: '0 0 1rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Shield size={18} /> Resolution & Forensic Sealing
-                  </h4>
-                  <div className="field">
-                    <label style={{ color: '#b45309', fontWeight: '700' }}>Investigation Resolution Notes (Manual Entry Required)</label>
-                    <textarea 
-                      value={resolutionNotes}
-                      onChange={e => setResolutionNotes(e.target.value)}
-                      placeholder="Enter findings, physical inspection results, or justification for resolution..."
-                      style={{ height: '100px', borderRadius: '0.75rem', border: '1.5px solid #fde68a', marginTop: '0.5rem', padding: '0.75rem' }}
-                      required
-                    />
                   </div>
                 </div>
 
@@ -485,156 +467,66 @@ const DashboardView = ({ shipments, blocks, isChainValid, onUpdate, searchQuery 
             </thead>
             <tbody>
               {filteredShipments.map((s, idx) => (
-                <React.Fragment key={s.shipmentId || idx}>
-                  <tr 
-                    className="table-row" 
-                    onClick={() => setExpandedShipment(expandedShipment === s.shipmentId ? null : s.shipmentId)}
-                    style={{ background: '#fff', transition: 'all 0.2s ease', cursor: 'pointer' }}
-                  >
-                    <td style={{ padding: '1.25rem 1.5rem', borderRadius: '1rem 0 0 1rem', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ padding: '0.5rem', background: '#f8fafc', borderRadius: '0.5rem' }}>
-                          <Package size={16} color="var(--primary)" />
-                        </div>
-                        <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{s.shipmentId}</span>
+                <tr key={idx} className="table-row" style={{ background: '#fff', transition: 'all 0.2s ease' }}>
+                  <td style={{ padding: '1.25rem 1.5rem', borderRadius: '1rem 0 0 1rem', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ padding: '0.5rem', background: '#f8fafc', borderRadius: '0.5rem' }}>
+                        <Package size={16} color="var(--primary)" />
                       </div>
-                    </td>
-                    <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '0.4rem', 
-                        padding: '0.35rem 0.75rem', 
-                        borderRadius: '2rem', 
-                        fontSize: '0.7rem', 
-                        fontWeight: '700',
-                        background: 
-                          s.status?.includes('TAMPER') || s.status?.includes('Rejected') ? '#fee2e2' : 
-                          s.status?.includes('TRANSIT') || s.status?.includes('PICKUP') ? '#e0f2fe' : '#f0fdf4',
-                        color: 
-                          s.status?.includes('TAMPER') || s.status?.includes('Rejected') ? '#b91c1c' : 
-                          s.status?.includes('TRANSIT') || s.status?.includes('PICKUP') ? '#0369a1' : '#15803d'
-                      }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
-                        {s.status}
+                      <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{s.shipmentId}</span>
+                    </div>
+                  </td>
+                  <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.4rem', 
+                      padding: '0.35rem 0.75rem', 
+                      borderRadius: '2rem', 
+                      fontSize: '0.7rem', 
+                      fontWeight: '700',
+                      background: 
+                        s.status === env.STATUS.IN_TRANSIT || s.status === 'TRANSIT' ? '#e0f2fe' : 
+                        s.status === env.STATUS.PICKUP ? '#fef3c7' :
+                        s.status === env.STATUS.DEALER_REJECTED || s.status === 'TAMPERED' ? '#fee2e2' : 
+                        s.status === env.STATUS.DEALER_ACCEPTED ? '#f0fdf4' : '#f1f5f9',
+                      color: 
+                        s.status === env.STATUS.IN_TRANSIT || s.status === 'TRANSIT' ? '#0369a1' : 
+                        s.status === env.STATUS.PICKUP ? '#92400e' :
+                        s.status === env.STATUS.DEALER_REJECTED || s.status === 'TAMPERED' ? '#b91c1c' : 
+                        s.status === env.STATUS.DEALER_ACCEPTED ? '#15803d' : '#475569'
+                    }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
+                      {s.status}
+                    </div>
+                  </td>
+                  <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.85rem' }}>{s.origin}</span>
+                      <ArrowRight size={12} color="var(--text-muted)" />
+                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{s.destination}</span>
+                    </div>
+                  </td>
+                  <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: s.temperature > 8 ? '#ef4444' : 'var(--text)' }}>
+                        <Thermometer size={14} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>{s.temperature}°C</span>
                       </div>
-                    </td>
-                    <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.85rem' }}>{s.origin}</span>
-                        <ArrowRight size={12} color="var(--text-muted)" />
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{s.destination}</span>
+                    </div>
+                  </td>
+                  <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <UserCheck size={12} />
                       </div>
-                    </td>
-                    <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: s.temperature > 8 ? '#ef4444' : 'var(--text)' }}>
-                          <Thermometer size={14} />
-                          <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>{s.temperature}°C</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f1f5f9', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <UserCheck size={12} />
-                        </div>
-                        <span style={{ fontSize: '0.8rem' }}>Node_{s.shipmentId.substring(4, 6)}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0 1.5rem', borderRadius: '0 1rem 1rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                        {expandedShipment === s.shipmentId ? <ChevronUp size={20} color="var(--text-muted)" /> : <ChevronDown size={20} color="var(--text-muted)" />}
-                      </div>
-                    </td>
-                  </tr>
-
-                  <AnimatePresence>
-                    {expandedShipment === s.shipmentId && (
-                      <tr>
-                        <td colSpan="6" style={{ padding: '0 1.5rem 1.5rem', border: 'none' }}>
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            style={{ overflow: 'hidden' }}
-                          >
-                            <div style={{ background: '#f8fafc', borderRadius: '1.25rem', border: '1px solid var(--border)', padding: '2rem', display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2.5rem' }}>
-                              <div>
-                                <h4 style={{ margin: '0 0 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <FileText size={18} color="var(--primary)" /> Product Dossier
-                                </h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                  {[
-                                    { label: 'Product Name', value: s.productName || 'N/A' },
-                                    { label: 'Manufacturer', value: s.manufacturerName || 'N/A' },
-                                    { label: 'Manufacturing Date', value: s.mfgDate || 'N/A' },
-                                    { label: 'Expiry Date', value: s.expDate || 'N/A' },
-                                    { label: 'Storage Requirement', value: `${s.minTemp || 2}°C to ${s.maxTemp || 8}°C` },
-                                    { label: 'Carrier ID', value: s.vehicleId || 'N/A' },
-                                    { label: 'Seal Number', value: s.sealNumber || 'N/A' }
-                                  ].map((item, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-                                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.label}</span>
-                                      <span style={{ fontSize: '0.8rem', fontWeight: '700' }}>{item.value}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                                <button 
-                                  className="btn btn-secondary" 
-                                  style={{ width: '100%', marginTop: '1.5rem', background: 'white' }}
-                                  onClick={(e) => { e.stopPropagation(); setInvestigatingShipment(s); }}
-                                >
-                                  Open Forensic Audit
-                                </button>
-                              </div>
-                              <div>
-                                <h4 style={{ margin: '0 0 1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <Activity size={18} color="var(--primary)" /> Global Forensic Flow
-                                </h4>
-                                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                  <div style={{ position: 'absolute', left: '11px', top: '5px', bottom: '5px', width: '2px', background: '#e2e8f0' }} />
-                                  {getShipmentHistory(s.shipmentId || s.id).map((event, i) => {
-                                    const isTamper = event.data.status === 'SECURITY_TAMPER';
-                                    const isRejected = event.data.status?.includes('Rejected');
-                                    return (
-                                      <div key={i} style={{ position: 'relative', paddingLeft: '2.5rem' }}>
-                                        <div style={{ 
-                                          position: 'absolute', left: '0', top: '0', width: '24px', height: '24px', borderRadius: '50%', 
-                                          background: isTamper || isRejected ? '#ef4444' : 'white', 
-                                          border: `2px solid ${isTamper || isRejected ? '#ef4444' : 'var(--primary)'}`,
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2
-                                        }}>
-                                          {isTamper ? <AlertCircle size={12} color="white" /> : <ShieldCheck size={12} color={isRejected ? 'white' : 'var(--primary)'} />}
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                          <div>
-                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: isTamper || isRejected ? '#ef4444' : 'var(--text)' }}>
-                                              {event.data.status?.toUpperCase() || 'ENTRY'}
-                                            </span>
-                                            <p style={{ margin: '0.1rem 0', fontSize: '0.85rem', fontWeight: '500' }}>
-                                              {event.data.location || 'Checkpoint Verification'}
-                                            </p>
-                                            {event.data.notes && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>"{event.data.notes}"</p>}
-                                          </div>
-                                          <div style={{ textAlign: 'right' }}>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>{new Date(event.timestamp).toLocaleDateString()}</span>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </React.Fragment>
+                      <span style={{ fontSize: '0.8rem' }}>Node_{s.shipmentId.substring(4, 6)}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '0 1.5rem', borderRadius: '0 1rem 1rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', textAlign: 'right' }}>
+                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>Details</button>
+                  </td>
+                </tr>
               ))}
               {shipments.length === 0 && (
                 <tr>

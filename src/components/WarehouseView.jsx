@@ -44,51 +44,11 @@ const WarehouseView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [viewingDoc, setViewingDoc] = useState(null);
   const [formData, setFormData] = useState({
-    productName: '',
-    batchNumber: '',
     storageZone: '',
     duration: '',
     arrivalTemp: '',
     damageCheck: 'None'
   });
-  const [originalData, setOriginalData] = useState({});
-
-  React.useEffect(() => {
-    if (selectedShipment) {
-      setFormData(prev => ({
-        ...prev,
-        productName: selectedShipment.productName || '',
-        batchNumber: selectedShipment.shipmentId || ''
-      }));
-      setOriginalData({
-        productName: selectedShipment.productName || '',
-        batchNumber: selectedShipment.shipmentId || ''
-      });
-    }
-  }, [selectedShipment]);
-
-  const handleFieldChange = (field, value) => {
-    if (originalData[field] !== undefined && originalData[field] !== value) {
-      const warningMsg = `⚠️ TAMPER ALERT: Unauthorized modification of '${field.replace(/([A-Z])/g, ' $1').toLowerCase()}'.`;
-      alert(`${warningMsg} This event will be recorded in the global forensic ledger!`);
-      
-      // Log the tamper event to the blockchain immediately
-      chainInstance.addBlock({
-        shipmentId: selectedBatch,
-        productName: field === 'productName' ? value : formData.productName,
-        status: 'SECURITY_TAMPER',
-        alertType: 'UNAUTHORIZED_FIELD_MODIFICATION',
-        modifiedField: field,
-        originalValue: originalData[field],
-        newValue: value,
-        actorRole: 'Warehouse',
-        location: `Warehouse Zone: ${formData.storageZone}`
-      }, env.DEFAULT_WAREHOUSE_ID);
-      
-      if (onUpdate) onUpdate();
-    }
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
   const selectedShipment = shipments.find(s => s.shipmentId === selectedBatch);
 
@@ -167,17 +127,6 @@ const WarehouseView = ({ shipments, onUpdate, activeOtps, searchQuery }) => {
 
           {selectedBatch && (
             <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                <div className="field">
-                  <label>Product Name (Common Field)</label>
-                  <input value={formData.productName} onChange={e => handleFieldChange('productName', e.target.value)} required />
-                </div>
-                <div className="field">
-                  <label>Batch No (Common Field)</label>
-                  <input value={formData.batchNumber} onChange={e => handleFieldChange('batchNumber', e.target.value)} required />
-                </div>
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div className="field">
                   <label>Arrival Temperature (°C)</label>

@@ -192,25 +192,43 @@ const EndUserView = ({ shipments, searchQuery }) => {
       )}
 
       {isScanning && (
-        <div className="card animate-fade" style={{ textAlign: 'center', padding: '6rem' }}>
+        <div className="card animate-fade" style={{ textAlign: 'center', padding: '6rem', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
            <div className="qr-scanner-sim" style={{ 
-             width: '240px', 
-             height: '240px', 
-             border: '3px solid var(--primary)', 
-             margin: '0 auto 2.5rem',
+             width: '300px', 
+             height: '300px', 
+             border: '2px solid #e2e8f0', 
+             margin: '0 auto 3rem',
              position: 'relative',
              overflow: 'hidden',
-             borderRadius: '1.5rem',
-             boxShadow: '0 0 30px rgba(37, 99, 235, 0.2)'
+             borderRadius: '2.5rem',
+             background: 'white',
+             padding: '40px',
+             boxShadow: '0 30px 60px -12px rgba(0,0,0,0.1)'
            }}>
-             <div style={{ width: '100%', height: '4px', background: 'var(--primary)', position: 'absolute', top: 0, left: 0, boxShadow: '0 0 15px var(--primary)', animation: 'scan 2.5s linear infinite', zIndex: 10 }} />
-             <div style={{ padding: '30px', opacity: 0.15 }}>
-                <QrCode size={180} />
-             </div>
+             <div style={{ width: '100%', height: '4px', background: 'var(--primary)', position: 'absolute', top: 0, left: 0, boxShadow: '0 0 20px var(--primary)', animation: 'scan 2.5s ease-in-out infinite', zIndex: 10 }} />
+             
+             <img 
+               src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=VERIFYING_HACKBLOCK_GENESIS" 
+               alt="QR Code"
+               style={{ width: '100%', height: '100%', opacity: 0.1 }}
+             />
+
+             {/* Scanner Corners */}
+             <div style={{ position: 'absolute', top: 20, left: 20, width: 30, height: 30, borderTop: '6px solid var(--primary)', borderLeft: '6px solid var(--primary)', borderRadius: '8px 0 0 0' }} />
+             <div style={{ position: 'absolute', top: 20, right: 20, width: 30, height: 30, borderTop: '6px solid var(--primary)', borderRight: '6px solid var(--primary)', borderRadius: '0 8px 0 0' }} />
+             <div style={{ position: 'absolute', bottom: 20, left: 20, width: 30, height: 30, borderBottom: '6px solid var(--primary)', borderLeft: '6px solid var(--primary)', borderRadius: '0 0 0 8px' }} />
+             <div style={{ position: 'absolute', bottom: 20, right: 20, width: 30, height: 30, borderBottom: '6px solid var(--primary)', borderRight: '6px solid var(--primary)', borderRadius: '0 0 8px 0' }} />
            </div>
-           <h3 style={{ fontSize: '1.5rem' }}>Authenticating Ledger Signature...</h3>
-           <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Comparing local batch data with global immutable nodes.</p>
-           <style dangerouslySetInnerHTML={{ __html: `@keyframes scan { 0% { top: -4px; } 100% { top: 240px; } }` }} />
+           
+           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+             <Activity className="animate-pulse" color="var(--primary)" size={20} />
+             <h3 style={{ fontSize: '1.75rem', margin: 0 }}>Cryptographic Handshake...</h3>
+           </div>
+           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '400px' }}>Synchronizing with blockchain nodes to verify batch signature integrity.</p>
+           
+           <style dangerouslySetInnerHTML={{ __html: `@keyframes scan { 0% { top: 0%; opacity: 0.2; } 50% { top: 100%; opacity: 1; } 100% { top: 0%; opacity: 0.2; } }` }} />
+           
+           <button onClick={() => setIsScanning(false)} className="btn-secondary" style={{ marginTop: '3rem', padding: '0.75rem 2.5rem' }}>Cancel Authentication</button>
         </div>
       )}
 

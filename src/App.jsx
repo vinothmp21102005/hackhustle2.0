@@ -14,8 +14,7 @@ import {
   ArrowLeft,
   ArrowRight,
   RefreshCw,
-  X,
-  LogOut
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { chainInstance } from './lib/blockchain';
@@ -28,6 +27,7 @@ import DealerView from './components/DealerView';
 import EndUserView from './components/EndUserView';
 import DashboardView from './components/DashboardView';
 import CustomsBrokerView from './components/CustomsBrokerView';
+import LoginView from './components/LoginView';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -38,45 +38,24 @@ function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [activeOtps, setActiveOtps] = useState({}); // { shipmentId: otp }
   const [walletAddress, setWalletAddress] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'Manufacturer', 'Carrier', 'Warehouse', 'Dealer'
-  const [companyName, setCompanyName] = useState('');
-
-  const handleLogout = () => {
-    setUserRole(null);
-    setCompanyName('');
-    setActiveTab('dashboard');
-  };
+  const [user, setUser] = useState(null); // { companyName, role, walletAddress }
 
   const handleConnectWallet = async () => {
     try {
       const { address, type } = await connectWallet();
       setWalletAddress(address);
+      console.log(`Connected via ${type}: ${address}`);
     } catch (error) {
       console.error("Connection error:", error);
     }
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const role = formData.get('role');
-    const company = formData.get('company');
-    const password = formData.get('password');
-    
-    // Simple check for demo: allow any password that matches env bypass or is 'admin123'
-    if (password === env.OTP_BYPASS_CODE || password === 'admin123' || !password) {
-      setUserRole(role);
-      setCompanyName(company);
-      
-      // Auto-select first allowed tab
-      if (role === 'Manufacturer') setActiveTab('producer');
-      else if (role === 'Carrier') setActiveTab('carrier');
-      else if (role === 'Warehouse') setActiveTab('warehouse');
-      else if (role === 'Dealer') setActiveTab('dealer');
-    } else {
-      alert("Invalid Access Credentials. Please check your password.");
-    }
-  };
+
+
+  // Auto-connect on mount
+  useEffect(() => {
+    handleConnectWallet();
+  }, []);
 
   // Sync with blockchain instance
   const refreshChain = () => {
@@ -103,86 +82,47 @@ function App() {
   };
 
   useEffect(() => {
-    handleConnectWallet();
     refreshChain();
     // Auto-refresh every 5 seconds to ensure ledger parity
     const interval = setInterval(refreshChain, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const allMenuItems = [
-    { id: 'dashboard', label: 'Network State', icon: LayoutDashboard, roles: ['any'] },
-    { id: 'producer', label: 'Manufacturer', icon: PlusCircle, roles: ['Manufacturer'] },
-    { id: 'carrier', label: 'Carrier', icon: Truck, roles: ['Carrier'] },
-    { id: 'warehouse', label: 'Warehouse', icon: Warehouse, roles: ['Warehouse'] },
-    { id: 'dealer', label: 'Dealer', icon: Store, roles: ['Dealer'] },
-    { id: 'enduser', label: 'Consumer Verify', icon: UserCheck, roles: ['any'] },
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'producer', label: 'Producer Portal', icon: PlusCircle },
+    { id: 'carrier', label: 'Carrier Logistics', icon: Truck },
+    { id: 'warehouse', label: 'Warehouse Hub', icon: Warehouse },
+    { id: 'customs', label: 'Customs Broker', icon: ShieldCheck },
+    { id: 'dealer', label: 'Dealer Inventory', icon: Store },
+    { id: 'enduser', label: 'Consumer Verify', icon: UserCheck },
   ];
-
-  const menuItems = allMenuItems.filter(item => 
-    item.roles.includes('any') || item.roles.includes(userRole)
-  );
 
   const renderView = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardView shipments={shipments} blocks={blocks} isChainValid={isChainValid} onUpdate={refreshChain} searchQuery={searchQuery} />;
+      case 'dashboard': return <DashboardView user={user} shipments={shipments} blocks={blocks} isChainValid={isChainValid} onUpdate={refreshChain} searchQuery={searchQuery} />;
       case 'producer': return <ProducerView onUpdate={refreshChain} />;
       case 'carrier': return <CarrierView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} searchQuery={searchQuery} />;
       case 'warehouse': return <WarehouseView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} searchQuery={searchQuery} />;
+      case 'customs': return <CustomsBrokerView shipments={shipments} onUpdate={refreshChain} searchQuery={searchQuery} />;
       case 'dealer': return <DealerView shipments={shipments} onUpdate={refreshChain} activeOtps={activeOtps} onGenerateOtp={handleGenerateOtp} searchQuery={searchQuery} />;
       case 'enduser': return <EndUserView shipments={shipments} searchQuery={searchQuery} />;
-      default: return <DashboardView shipments={shipments} blocks={blocks} isChainValid={isChainValid} onUpdate={refreshChain} searchQuery={searchQuery} />;
+      default: return <DashboardView user={user} shipments={shipments} blocks={blocks} isChainValid={isChainValid} onUpdate={refreshChain} searchQuery={searchQuery} />;
     }
   };
 
-  if (!userRole) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'Inter, sans-serif' }}>
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ background: 'white', padding: '3rem', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '100%', maxWidth: '450px', border: '1px solid #e2e8f0' }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <div style={{ background: 'var(--primary)', color: 'white', width: '56px', height: '56px', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
-              <Lock size={28} />
-            </div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.5rem' }}>Company Access</h2>
-            <p style={{ color: '#64748b', fontWeight: '500' }}>Secure Logistics Gateway</p>
-          </div>
-
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Company Name</label>
-              <input name="company" required placeholder="e.g. BioPharma Global" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', transition: 'border-color 0.2s', width: '100%', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Access Credentials</label>
-              <input name="password" type="password" required placeholder="••••••••" style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Select Operational Role</label>
-              <select name="role" required style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid #e2e8f0', outline: 'none', background: 'white', width: '100%', boxSizing: 'border-box' }}>
-                <option value="Manufacturer">Manufacturer / Producer</option>
-                <option value="Carrier">Logistics Carrier</option>
-                <option value="Warehouse">Warehouse Hub</option>
-                <option value="Dealer">Authorized Dealer</option>
-              </select>
-            </div>
-
-            <button type="submit" style={{ background: 'var(--primary)', color: 'white', padding: '1rem', borderRadius: '0.75rem', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', marginTop: '1rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}>
-              Authorize & Enter
-            </button>
-          </form>
-          
-          <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={14} /> Cryptographically Secured Session
-          </div>
-        </motion.div>
-      </div>
-    );
+  if (!user) {
+    return <LoginView onLogin={(userData) => {
+      setUser(userData);
+      // Auto-switch to the role's tab
+      const roleMap = {
+        'Manufacturer': 'producer',
+        'Carrier': 'carrier',
+        'Warehouse': 'warehouse',
+        'Dealer': 'dealer'
+      };
+      if (roleMap[userData.role]) setActiveTab(roleMap[userData.role]);
+    }} />;
   }
 
   return (
@@ -237,12 +177,7 @@ function App() {
             </span>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e293b' }}>{companyName}</span>
-              <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--primary)' }}>{userRole}</span>
-            </div>
-
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             {walletAddress ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem', 
@@ -260,27 +195,13 @@ function App() {
                   display: 'flex', alignItems: 'center', gap: '0.5rem', 
                   padding: '0.5rem 1rem', borderRadius: '0.5rem',
                   background: 'var(--primary)', color: 'white',
-                  border: 'none', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer'
+                  border: '1px solid var(--primary)', fontWeight: '600'
                 }}
               >
-                Connect Wallet
+                <span style={{ fontSize: '0.875rem' }}>Connect Wallet</span>
               </button>
             )}
 
-            <button 
-              onClick={handleLogout}
-              style={{ 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                padding: '0.5rem', borderRadius: '0.5rem',
-                background: '#fef2f2', color: '#dc2626',
-                border: '1px solid #fee2e2', cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
             <button 
               onClick={() => setActiveTab('dashboard')}
               style={{ 

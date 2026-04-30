@@ -286,14 +286,24 @@ const ProducerView = ({ onUpdate }) => {
               </code>
             </div>
 
-            <div style={{ marginTop: '1.5rem' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: '800', marginBottom: '0.5rem' }}>VERIFIED ARTIFACTS (8/8)</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-                {formData.documents.map(d => (
-                  <div key={d.type} style={{ fontSize: '0.55rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <ShieldCheck size={10} /> {d.type}
-                  </div>
-                ))}
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <p style={{ fontSize: '0.6rem', fontWeight: '800', marginBottom: '0.5rem' }}>VERIFIED ARTIFACTS (8/8)</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                  {formData.documents.map(d => (
+                    <div key={d.type} style={{ fontSize: '0.55rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <ShieldCheck size={10} /> {d.type}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${formData.batchNumber}`} 
+                  alt="Batch QR Code"
+                  style={{ width: '80px', height: '80px', border: '4px solid white', borderRadius: '0.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
+                />
+                <p style={{ fontSize: '0.5rem', color: '#64748b', marginTop: '0.25rem', fontWeight: '700' }}>SCAN TO VERIFY</p>
               </div>
             </div>
           </div>
