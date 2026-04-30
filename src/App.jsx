@@ -41,6 +41,12 @@ function App() {
   const [userRole, setUserRole] = useState(null); // 'Manufacturer', 'Carrier', 'Warehouse', 'Dealer'
   const [companyName, setCompanyName] = useState('');
 
+  const handleLogout = () => {
+    setUserRole(null);
+    setCompanyName('');
+    setActiveTab('dashboard');
+  };
+
   const handleConnectWallet = async () => {
     try {
       const { address, type } = await connectWallet();
@@ -231,7 +237,12 @@ function App() {
             </span>
           </div>
           
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e293b' }}>{companyName}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--primary)' }}>{userRole}</span>
+            </div>
+
             {walletAddress ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem', 
@@ -249,13 +260,27 @@ function App() {
                   display: 'flex', alignItems: 'center', gap: '0.5rem', 
                   padding: '0.5rem 1rem', borderRadius: '0.5rem',
                   background: 'var(--primary)', color: 'white',
-                  border: '1px solid var(--primary)', fontWeight: '600'
+                  border: 'none', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer'
                 }}
               >
-                <span style={{ fontSize: '0.875rem' }}>Connect Wallet</span>
+                Connect Wallet
               </button>
             )}
 
+            <button 
+              onClick={handleLogout}
+              style={{ 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                padding: '0.5rem', borderRadius: '0.5rem',
+                background: '#fef2f2', color: '#dc2626',
+                border: '1px solid #fee2e2', cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
             <button 
               onClick={() => setActiveTab('dashboard')}
               style={{ 
@@ -286,25 +311,6 @@ function App() {
             >
               <RefreshCw size={18} />
               <span style={{ fontSize: '0.875rem' }}>Resync</span>
-            </button>
-
-            <button 
-              onClick={() => {
-                if(window.confirm("Are you sure you want to log out? Your operational session will end.")) {
-                  setUserRole(null);
-                  setCompanyName('');
-                  setActiveTab('dashboard');
-                }
-              }}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.5rem 1rem', borderRadius: '0.5rem',
-                background: '#fff1f2', color: '#e11d48',
-                border: '1px solid #fecaca', fontWeight: '700'
-              }}
-            >
-              <LogOut size={18} />
-              <span style={{ fontSize: '0.875rem' }}>Logout</span>
             </button>
             <button 
               onClick={() => setActiveTab('producer')}
